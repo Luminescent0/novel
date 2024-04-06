@@ -8,6 +8,6 @@ import (
 
 func main() {
 	dao.InitDB()
-	api.InitEngine()
 	service.InitRdb()
+	api.InitEngine()
 }

@@ -99,11 +99,26 @@ func JwtAuthMiddleware(ctx *gin.Context) {
 		ctx.Abort()
 		return
 	}
-	token, err := jwt.ParseWithClaims(authHeader, &MyClaims{}, func(token *jwt.Token) (interface{}, error) {
+	var myClaims MyClaims
+	token, err := jwt.ParseWithClaims(authHeader, &myClaims, func(token *jwt.Token) (interface{}, error) {
 		return MySecret, nil
 	})
-	claims := token.Claims.(*MyClaims)
+	fmt.Println(token)
+	fmt.Println(token.Claims)
+	var (
+		claims *MyClaims
+		ok     bool
+	)
+
+	if claims, ok = token.Claims.(*MyClaims); !ok {
+		tool.RespSuccessfulWithData(ctx, gin.H{
+			"msg": "token无效",
+		})
+		ctx.Abort()
+		return
+	}
 	username := claims.Username
+	fmt.Println(username)
 	if err != nil {
 		fmt.Println("parse token failed err", err)
 		tool.RespInternalError(ctx)

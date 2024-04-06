@@ -7,8 +7,8 @@ import (
 )
 
 func SelectUserByUsername(username string) (model.User, error) {
-	user := model.User{}
-	err := dB.Table("user").Where("username=?", username).Take(&user)
+	var user model.User
+	err := dB.Table("user").Where("username=?", username).Find(&user)
 	fmt.Println(err.Error)
 	if err != nil {
 		return user, err.Error
@@ -22,29 +22,6 @@ func InsertUser(user model.User) error {
 		return err.Error
 	}
 	return nil
-}
-
-func AddRefreshToken(username, token string) error {
-	return dB.Create(&model.User{
-		Username:     username,
-		RefreshToken: token,
-	}).Error
-}
-
-func GetRefreshToken(rt string) string {
-	var username string
-	dB.Model(&model.User{}).Select("username").
-		Where("refresh_token = ? ", rt).
-		Scan(&username)
-	return username
-}
-
-func DelRefreshToken(rt, username string) {
-	err := dB.Model(&model.User{}).Where("refresh_token = ? AND username= ?", rt, username).UpdateColumn("refresh_token", nil)
-	if err != nil {
-		log.Println(err)
-	}
-	return
 }
 
 func UpdatePassword(username, newPassword string) error {

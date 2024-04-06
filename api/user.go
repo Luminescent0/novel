@@ -39,8 +39,9 @@ func login(ctx *gin.Context) {
 		tool.RespInternalError(ctx)
 		return
 	}
-	tool.RespSuccessfulLogin(ctx, token, retoken)
+	tool.RespSuccessfulLogin(ctx, retoken, token)
 }
+
 func register(ctx *gin.Context) {
 	username, password, err := verify(ctx)
 	if err != nil {
@@ -75,6 +76,7 @@ func register(ctx *gin.Context) {
 	}
 	tool.RespSuccessfulWithData(ctx, "注册成功")
 }
+
 func verify(ctx *gin.Context) (string, string, error) {
 	validate := validator.New() //创建验证器
 	username := ctx.PostForm("username")
@@ -88,6 +90,7 @@ func verify(ctx *gin.Context) (string, string, error) {
 	}
 	return username, password, nil
 }
+
 func RefreshToken(ctx *gin.Context) {
 	rt, exist := ctx.GetPostForm("refresh_token")
 	if !exist {
@@ -105,12 +108,13 @@ func RefreshToken(ctx *gin.Context) {
 	}
 	tool.RespSuccessfulLogin(ctx, retoken, atoken)
 }
+
 func changePassword(ctx *gin.Context) {
 	oldPassword := ctx.PostForm("oldPassword")
 	newPassword := ctx.PostForm("newPassword")
 	iUsername, _ := ctx.Get("username")
 	username := iUsername.(string) //接口断言
-
+	fmt.Println(username)
 	//检验旧密码
 	flag, err := service.IsPasswordCorrect(username, oldPassword)
 	if err != nil {

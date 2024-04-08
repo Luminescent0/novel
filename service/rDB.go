@@ -79,3 +79,35 @@ func ReleaseLock(bookId, userId int) error {
 	fmt.Println("Lock released successfully")
 	return nil
 }
+
+func CheckLikeRateLimit(bookId, userId int) (bool, error) {
+	key := fmt.Sprintf("like_count:%d:%d", bookId, userId)
+	//检查计数器是否存在,不存在就新增
+	count, err := rDB.Get(ctx, key).Int()
+	if err != nil && err != redis.Nil {
+		log.Println(err)
+		return false, err
+	}
+	if err == redis.Nil {
+		err := rDB.Set(ctx, key, 1, 1*time.Minute).Err()
+		if err != nil {
+			log.Println("Set failed:", err)
+			return false, err
+		}
+		return true, nil
+	}
+	if count < 3 {
+		err := rDB.Incr(ctx, key).Err()
+		if err != nil {
+			log.Println("Incr failed:", err)
+			return false, err
+		}
+		err = rDB.Expire(ctx, key, 1*time.Minute).Err()
+		if err != nil {
+			log.Println("update expire failed:", err)
+			return false, err
+		}
+		return true, nil
+	}
+	return false, nil //计数器存在且达到限制，拒绝请求
+}

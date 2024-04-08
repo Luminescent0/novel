@@ -152,6 +152,15 @@ func liked(ctx *gin.Context) {
 	service.AcquireLock(bookId, userId) //分布式锁
 	defer service.ReleaseLock(bookId, userId)
 
+	allow, err := service.CheckLikeRateLimit(bookId, userId)
+	if err != nil {
+		tool.RespInternalError(ctx)
+		return
+	}
+	if !allow {
+		tool.RespErrorWithData(ctx, "频繁操作")
+	}
+
 	flag := service.IsMemberInSet(sBookId, sUserId)
 	if !flag { //Redis里没有 在MySQL里找
 		flag, err = service.SelectLiked(bookId, userId)

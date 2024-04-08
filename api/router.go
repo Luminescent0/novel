@@ -17,8 +17,18 @@ func InitEngine() {
 	{
 		userGroup.Use(JwtAuthMiddleware)
 		userGroup.POST("/password", changePassword)
-	}
+		userGroup.POST("/liked", liked)
 
+	}
+	bookGroup := engine.Group("/book")
+	{
+		bookGroup.GET("/search", search)
+	}
+	execGroup := engine.Group("/exec")
+	{
+		execGroup.Use(JwtAuthMiddleware)
+
+	}
 	err := engine.Run(":8080")
 	if err != nil {
 		return

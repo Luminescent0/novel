@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-var ctx, cancel = context.WithTimeout(context.Background(), 500*time.Second)
+var ctx, _ = context.WithTimeout(context.Background(), 500*time.Second)
 var rDB *redis.Client
 
 func InitRdb() {
@@ -24,12 +24,34 @@ func InitRdb() {
 }
 
 func Set(key, value string, expiration time.Duration) {
-	rDB.Set(ctx, key, value, expiration)
+	err := rDB.Set(ctx, key, value, expiration).Err()
+	if err != nil {
+		log.Println("redis Set failed:", err)
+	}
 }
 func Get(key string) (string, error) {
 	return rDB.Get(ctx, key).Result()
 }
+
 func Del(key string) (int64, error) {
 	return rDB.Del(ctx, key).Result()
+}
 
+func IsMemberInSet(key, member string) bool {
+	ok, _ := rDB.SIsMember(ctx, key, member).Result()
+	return ok
+}
+
+func SetAdd(key, value string, expiration time.Duration) {
+	err := rDB.SAdd(ctx, key, value, expiration).Err()
+	if err != nil {
+		log.Println("redis SAdd failed:", err)
+	}
+}
+
+func SetMemberDel(key, value string) {
+	err := rDB.SRem(ctx, key, value).Err()
+	if err != nil {
+		log.Println("redis SRem failed:", err)
+	}
 }

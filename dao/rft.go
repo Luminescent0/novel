@@ -10,7 +10,7 @@ func AddRefreshToken(username, token string) error {
 	res := dB.Table("rft").Where("username=?", username).Find(&rf)
 	if res.RowsAffected == 0 {
 		rf.Username = username
-		rf.Refresh_token = token
+		rf.RefreshToken = token
 		err := dB.Table("rft").Create(&rf)
 		if err != nil {
 			log.Println(err)

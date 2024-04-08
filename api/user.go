@@ -9,6 +9,7 @@ import (
 	"novel/model"
 	"novel/service"
 	"novel/tool"
+	"strconv"
 )
 
 const rtLen = 64
@@ -133,4 +134,55 @@ func changePassword(ctx *gin.Context) {
 		return
 	}
 	tool.RespSuccessfulWithData(ctx, "修改成功")
+}
+
+func liked(ctx *gin.Context) {
+	sBookId := ctx.PostForm("bookId")
+	bookId, _ := strconv.Atoi(sBookId)
+	iUsername, _ := ctx.Get("username")
+	username := iUsername.(string)
+	user, err := service.SelectUserByUsername(username)
+	if err != nil {
+		tool.RespInternalError(ctx)
+		return
+	}
+	userId := user.Id
+	sUserId := strconv.Itoa(userId)
+	flag := service.IsMemberInSet(sBookId, sUserId)
+	if !flag { //Redis里没有 在MySQL里找
+		flag, err = service.SelectLiked(bookId, userId)
+		if err != nil {
+			fmt.Println("select liked err:", err)
+			tool.RespInternalError(ctx)
+			return
+		}
+		if flag { //MySQL里有的话就把赞取消
+			err = service.CancelLiked(bookId, userId)
+			if err != nil {
+				fmt.Println("MySQL delete liked failed:", err)
+				tool.RespInternalError(ctx)
+				return
+			}
+			tool.RespSuccessfulWithData(ctx, "取消点赞成功")
+			return
+		}
+		service.SetAdd(sBookId, sUserId, 0)
+		err = service.Liked(bookId, userId) //MySQL里也没有就点赞
+		if err != nil {
+			fmt.Println("MySQL liked failed:", err)
+			tool.RespInternalError(ctx)
+			return
+		}
+		tool.RespSuccessfulWithData(ctx, "点赞成功")
+	}
+	service.SetMemberDel(sBookId, sUserId) //redis里有的话取消点赞
+	err = service.CancelLiked(bookId, userId)
+	if err != nil {
+		fmt.Println("MySQL delete liked failed:", err)
+		tool.RespInternalError(ctx) //这里可以改成假返回
+		return
+	}
+	tool.RespSuccessfulWithData(ctx, "取消点赞成功")
+	return
+
 }

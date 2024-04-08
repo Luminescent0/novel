@@ -33,3 +33,33 @@ func UpdatePassword(username, newPassword string) error {
 	}
 	return nil
 }
+
+func SelectLiked(bookId, userId int) error {
+	var liked model.Liked
+	err := dB.Table("liked").Where("book_id=? AND user_id=?", bookId, userId).Find(&liked)
+	if err != nil {
+		log.Println(err)
+		return err.Error
+	}
+	return nil
+}
+
+func DelLiked(bookId, userId int) error {
+	var liked model.Liked
+	err := dB.Table("liked").Where("book_id=? AND user_id=?", bookId, userId).Delete(&liked)
+	if err != nil {
+		log.Println(err)
+		return err.Error
+	}
+	return nil
+}
+
+func AddLiked(bookId, userId int) error {
+	var liked = model.Liked{BookId: bookId, UserId: userId}
+	err := dB.Table("liked").Where("book_id=? AND user_id=?", bookId, userId).Create(&liked)
+	if err != nil {
+		log.Println(err)
+		return err.Error
+	}
+	return nil
+}

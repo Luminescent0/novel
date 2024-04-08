@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
+	"log"
 	"novel/dao"
 	"novel/model"
 	"time"
@@ -59,6 +60,7 @@ func IsRepeatUsername(username string) (bool, error) {
 	}
 	return true, nil
 }
+
 func Register(user model.User) error {
 	password, err := Cipher(user)
 	if err != nil {
@@ -71,6 +73,7 @@ func Register(user model.User) error {
 	}
 	return nil
 }
+
 func Cipher(user model.User) (string, error) {
 	password := []byte(user.Password)
 	nowG := time.Now()
@@ -80,6 +83,7 @@ func Cipher(user model.User) (string, error) {
 	}
 	return string(hashedPassword), nil
 }
+
 func ChangePassword(username, newPassword string) error {
 	user := model.User{Username: username, Password: newPassword}
 	cnewPassword, err := Cipher(user)
@@ -90,4 +94,46 @@ func ChangePassword(username, newPassword string) error {
 	err = dao.UpdatePassword(username, cnewPassword)
 	fmt.Println(err)
 	return err
+}
+
+func SelectUserByUsername(username string) (model.User, error) {
+	user, err := dao.SelectUserByUsername(username)
+	if err != nil {
+		log.Println(err)
+		if err == gorm.ErrRecordNotFound {
+			fmt.Println("用户不存在")
+			return user, err
+		}
+		return user, err
+	}
+	return user, nil
+}
+
+func SelectLiked(bookId, userId int) (bool, error) {
+	err := dao.SelectLiked(bookId, userId)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+func CancelLiked(bookId, userId int) error {
+	err := dao.DelLiked(bookId, userId)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
+}
+
+func Liked(bookId, userId int) error {
+	err := dao.AddLiked(bookId, userId)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
 }

@@ -148,6 +148,10 @@ func liked(ctx *gin.Context) {
 	}
 	userId := user.Id
 	sUserId := strconv.Itoa(userId)
+
+	service.AcquireLock(bookId, userId) //分布式锁
+	defer service.ReleaseLock(bookId, userId)
+
 	flag := service.IsMemberInSet(sBookId, sUserId)
 	if !flag { //Redis里没有 在MySQL里找
 		flag, err = service.SelectLiked(bookId, userId)

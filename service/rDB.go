@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/net/context"
 	"log"
@@ -54,4 +55,27 @@ func SetMemberDel(key, value string) {
 	if err != nil {
 		log.Println("redis SRem failed:", err)
 	}
+}
+
+// AcquireLock 获取分布式锁
+func AcquireLock(bookId int, userId int) bool {
+	lockKey := fmt.Sprintf("lock:%d:%d", bookId, userId)                   //生成唯一的锁标识
+	result, err := rDB.SetNX(ctx, lockKey, "locked", time.Second).Result() // 使用 SETNX 命令尝试获取锁，如果键不存在则设置成功
+	if err != nil {
+		log.Println("Error acquiring lock:", err)
+		return false
+	}
+	return result
+}
+
+// ReleaseLock 释放分布式锁
+func ReleaseLock(bookId, userId int) error {
+	lockKey := fmt.Sprintf("lock:%d:%d", bookId, userId)
+	_, err := rDB.Del(ctx, lockKey).Result()
+	if err != nil {
+		log.Println("Error releasing lock:", err)
+		return err
+	}
+	fmt.Println("Lock released successfully")
+	return nil
 }

@@ -147,55 +147,23 @@ func liked(ctx *gin.Context) {
 		return
 	}
 	userId := user.Id
-	sUserId := strconv.Itoa(userId)
 
 	service.AcquireLock(bookId, userId) //分布式锁
 	defer service.ReleaseLock(bookId, userId)
 
-	allow, err := service.CheckLikeRateLimit(bookId, userId)
+	allow, err := service.CheckLikeRateLimit(bookId, userId) //计数器
 	if err != nil {
 		tool.RespInternalError(ctx)
 		return
 	}
 	if !allow {
 		tool.RespErrorWithData(ctx, "频繁操作")
-	}
-
-	flag := service.IsMemberInSet(sBookId, sUserId)
-	if !flag { //Redis里没有 在MySQL里找
-		flag, err = service.SelectLiked(bookId, userId)
-		if err != nil {
-			fmt.Println("select liked err:", err)
-			tool.RespInternalError(ctx)
-			return
-		}
-		if flag { //MySQL里有的话就把赞取消
-			err = service.CancelLiked(bookId, userId)
-			if err != nil {
-				fmt.Println("MySQL delete liked failed:", err)
-				tool.RespInternalError(ctx)
-				return
-			}
-			tool.RespSuccessfulWithData(ctx, "取消点赞成功")
-			return
-		}
-		service.SetAdd(sBookId, sUserId, 0)
-		err = service.Liked(bookId, userId) //MySQL里也没有就点赞
-		if err != nil {
-			fmt.Println("MySQL liked failed:", err)
-			tool.RespInternalError(ctx)
-			return
-		}
-		tool.RespSuccessfulWithData(ctx, "点赞成功")
-	}
-	service.SetMemberDel(sBookId, sUserId) //redis里有的话取消点赞
-	err = service.CancelLiked(bookId, userId)
-	if err != nil {
-		fmt.Println("MySQL delete liked failed:", err)
-		tool.RespInternalError(ctx) //这里可以改成假返回
 		return
 	}
-	tool.RespSuccessfulWithData(ctx, "取消点赞成功")
-	return
-
+	err = service.EnqueueLikeRequest(bookId, userId)
+	if err != nil {
+		tool.RespInternalError(ctx)
+		return
+	}
+	service.ProcessLikeRequests() //消息队列
 }
